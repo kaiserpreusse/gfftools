@@ -1,7 +1,10 @@
 import gzip
+import logging
 
-from gfftools.attributes import read_gff_attributes, read_gtf_attributes
+from gfftools.attributes import read_gff_attributes, read_gtf_attributes, get_attributes
 from gfftools.model import Record, SequenceRegion, Sequence
+
+log = logging.getLogger(__name__)
 
 
 class GffReader(object):
@@ -30,17 +33,79 @@ class GffReader(object):
         self.has_fasta = False
         self.has_sequence_regions = False
 
+        # data containers for parse mode
+        self._records = []
+        self._sequence_reqions = []
+        self._sequences = {}
+
     @property
     def records(self):
-        return self.iterate_records()
+        if self._records:
+            return self._records
+        else:
+            return self.iterate_records()
 
     @property
     def sequence_regions(self):
-        return self.iterate_sequence_regions()
+        if self._sequence_reqions:
+            return self._sequence_reqions
+        else:
+            return self.iterate_sequence_regions()
 
     @property
     def sequences(self):
-        return self.iterate_sequences()
+        if self._sequences:
+            return list(self._sequences.values())
+        else:
+            return self.iterate_sequences()
+
+    def parse(self):
+        """
+        Read the entire file into memory and store records.
+        """
+        if self.gff_file_path.endswith('.gz'):
+            f = gzip.open(self.gff_file_path, 'rt')
+        else:
+            f = open(self.gff_file_path, 'rt')
+
+        parse_sequences = False
+        current_sequence_record = None
+        for l in f:
+            # Sequences
+            # wait until ##FASTA was found
+            if parse_sequences:
+                # check if new Sequence begins
+                if l.startswith('>'):
+                    # if we have a Sequence already, yield it
+                    if current_sequence_record:
+                        self._sequences[current_sequence_record.id] = current_sequence_record
+                    # create a new Sequence
+                    record_id = l.strip().replace('>', '')
+                    current_sequence_record = Sequence(id=record_id)
+                else:
+                    # if not new record, just append to the sequence
+                    current_sequence_record.sequence += l.strip()
+
+            # start parsing when reaching ##FASTA
+            if l.lower().startswith('##fasta'):
+                parse_sequences = True
+
+            # Records
+            if not l.startswith('#') and not parse_sequences:
+                flds = l.split('\t')
+                print(flds)
+                self._records.append(
+                    Record(flds[0], flds[1], flds[2], int(flds[3]), int(flds[4]), flds[5], flds[6], flds[7],
+                           get_attributes(self.file_type, flds)))
+
+            # SequenceRegions
+            if l.startswith('##sequence-region') and not parse_sequences:
+                flds = l.split()
+                self._sequence_reqions.append(SequenceRegion(flds[1], int(flds[2]), int(flds[3])))
+
+        if current_sequence_record:
+            self._sequences[current_sequence_record.id] = current_sequence_record
+        f.close()
 
     def header(self):
         """
@@ -122,17 +187,8 @@ class GffReader(object):
             if not l.startswith('#'):
                 flds = l.split('\t')
 
-                # get attribtues and parse depending on type
-                # gff files contain "attribute=some_value; another=some_value"
-                # gtf files contain "gene_id "ENSG00000223972"; gene_name "DDX11L1";"
-                attributes = None
-                if self.file_type == 'gff':
-                    attributes = read_gff_attributes(flds[8])
-                elif self.file_type == 'gtf':
-                    attributes = read_gtf_attributes(flds[8])
-
                 yield Record(flds[0], flds[1], flds[2], int(flds[3]), int(flds[4]), flds[5], flds[6], flds[7],
-                             attributes)
+                             get_attributes(self.file_type, flds))
 
         f.close()
 
@@ -192,3 +248,16 @@ class GffReader(object):
             yield current_sequence_record
 
         f.close()
+
+    def get_sequence(self, record_id):
+        """
+        Get a sequence by its ID.
+        """
+        if self._sequences:
+            if record_id in self._sequences:
+                return self._sequences[record_id]
+        else:
+            log.warning(f"Iterating sequences to search for {record_id} can be slow for large files.")
+            for s in self.sequences:
+                if s.id == record_id:
+                    return s

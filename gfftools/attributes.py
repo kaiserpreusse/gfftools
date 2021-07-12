@@ -1,5 +1,3 @@
-
-
 def read_gff_attributes(attribute_column: str) -> dict:
     """
     Parse attributes for a GFF3 record. Attributes with pre-defined meaning are parsed according to their
@@ -48,4 +46,16 @@ def read_gtf_attributes(attribute_column: str):
         except IndexError:
             pass
 
+    return attributes
+
+
+def get_attributes(file_type, flds):
+    # get attribtues and parse depending on type
+    # gff files contain "attribute=some_value; another=some_value"
+    # gtf files contain "gene_id "ENSG00000223972"; gene_name "DDX11L1";"
+    attributes = None
+    if file_type == 'gff':
+        attributes = read_gff_attributes(flds[8])
+    elif file_type == 'gtf':
+        attributes = read_gtf_attributes(flds[8])
     return attributes
