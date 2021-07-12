@@ -17,6 +17,27 @@ class Record:
     phase: str
     attributes: dict
 
+    def to_dict(self):
+        d = {}
+        # add attributes first to make sure that main properties overwrite
+        for k, v in self.attributes.items():
+            d[k] = v
+
+        d.update(
+            {
+                'seqid': self.seqid,
+                'source': self.source,
+                'type': self.type,
+                'start': self.start,
+                'end': self.end,
+                'score': self.score,
+                'strand': self.strand,
+                'phase': self.phase
+            }
+        )
+
+        return d
+
     def get_attribute(self, key):
         if key in self.attributes:
             return self.attributes[key]
