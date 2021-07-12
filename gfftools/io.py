@@ -93,7 +93,7 @@ class GffReader(object):
             # Records
             if not l.startswith('#') and not parse_sequences:
                 flds = l.split('\t')
-                print(flds)
+
                 self._records.append(
                     Record(flds[0], flds[1], flds[2], int(flds[3]), int(flds[4]), flds[5], flds[6], flds[7],
                            get_attributes(self.file_type, flds)))
