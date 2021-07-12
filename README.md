@@ -7,5 +7,7 @@
 
 ## install
 
-Not yet on PyPI.
+```shell
+pip install gfftools
+```
 
