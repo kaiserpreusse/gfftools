@@ -5,6 +5,12 @@
 [![Neo4j](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9-green)](https://python.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+
+Python package to parse GFF files and access the individual records. Only files following 
+the official GFF Version 3 specification are supported: https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
+
+Most GTF files from e.g. ENSEMBL work as well but not all features are tested for GTF. 
+
 ## install
 
 ```shell
