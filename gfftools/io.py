@@ -1,8 +1,9 @@
 import gzip
 import logging
 
-from gfftools.attributes import read_gff_attributes, read_gtf_attributes, get_attributes
+from gfftools.attributes import get_attributes
 from gfftools.model import Record, SequenceRegion, Sequence
+from gfftools.helper import _get, _get_and_cast
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +102,11 @@ class GffReader(object):
             # SequenceRegions
             if l.startswith('##sequence-region') and not parse_sequences:
                 flds = l.split()
-                self._sequence_reqions.append(SequenceRegion(flds[1], int(flds[2]), int(flds[3])))
+                seqid = _get(1, flds, None)
+                start = _get_and_cast(2, flds, int, None)
+                end = _get_and_cast(3, flds, int, None)
+
+                self._sequence_reqions.append(SequenceRegion(seqid, start, end))
 
         if current_sequence_record:
             self._sequences[current_sequence_record.id] = current_sequence_record
@@ -192,7 +197,7 @@ class GffReader(object):
 
         f.close()
 
-    def iterate_sequence_regions(self) -> Record:
+    def iterate_sequence_regions(self) -> SequenceRegion:
 
         if self.gff_file_path.endswith('.gz'):
             f = gzip.open(self.gff_file_path, 'rt')
@@ -207,8 +212,10 @@ class GffReader(object):
 
             if line.startswith('##sequence-region'):
                 flds = line.split()
-
-                yield SequenceRegion(flds[1], int(flds[2]), int(flds[3]))
+                seqid = _get(1, flds, None)
+                start = _get_and_cast(2, flds, int, None)
+                end = _get_and_cast(3, flds, int, None)
+                yield SequenceRegion(seqid, start, end)
 
         f.close()
 
